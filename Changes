@@ -1,6 +1,7 @@
 Revision history for Perl extension Term::Twiddle.
 
-0.01  Wed Dec 11 10:24:31 2002
-	- original version; created by h2xs 1.21 with options
-		-AX Term::Twiddle
 
+2.60  Use Time::HiRes for setitimer implementation.
+
+2.51  First public release (but has been in private use for several
+      years).

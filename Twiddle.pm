@@ -5,11 +5,11 @@ use strict;
 use warnings;
 use vars qw( @ISA $VERSION );
 
-$VERSION = '2.51';
+$VERSION = '2.60';
 
-require 'sys/syscall.ph';
+use Time::HiRes qw(setitimer ITIMER_REAL);
 $SIG{'ALRM'} = \&_spin;
-$SIG{'INT'} = $SIG{'TERM'} = \&_set_alarm(0); ## FIXME: this doesn't work yet
+$SIG{'INT'} = $SIG{'TERM'} = \&_set_alarm(0);
 
 my ( $thingy, $rate, $probability, $stream, $step );
 
@@ -90,23 +90,9 @@ sub random {
     $self->probability($prob);
 }
 
-## Tom Christiansen's timer: (with adjustments by Scott Wiersdorf)
 ## send me a SIGALRM in this many seconds (fractions ok)
 sub _set_alarm {
-    my $rate = shift;
-
-    my $ITIMER_REAL = 0;
-    my $itimer_t    = 'L4';
-
-    my $seconds  = int($rate);
-    my $useconds = ($rate - $seconds) * 1e6;
-
-    my $out_timer = pack($itimer_t, 0, 0, 0, 0);
-    my $in_timer  = pack($itimer_t, 0, 0, $seconds, $useconds);
-
-    return ( syscall(&SYS_setitimer, $ITIMER_REAL, $in_timer, $out_timer)
-	     ? return undef
-	     : 1 );
+    return setitimer(ITIMER_REAL, shift, 0);
 }
 
 sub _spin {
@@ -160,14 +146,18 @@ twiddling their thumbs, they can watch the computer twiddle its thumbs.
 
 =head2 During Twiddling
 
-Once the twiddler/spinner is in motion you need to do something. You
-can do almost anything in between B<start> and B<stop> as long as
-there are no B<sleep> calls in there (unless the process has been
-forked, as in a Perl B<system> call).
+Once the twiddler/spinner is in motion you need to do something (e.g.,
+unpack a tar file, call some long function, etc.). You can do almost
+anything in between B<start> and B<stop> as long as there are no
+B<sleep> calls in there (unless the process has been forked, as in a
+Perl B<system> call). From Time::HiRes:
 
-Basically you should do no other I/O with the tty while the twiddler
-is going or the twiddler will appear to drag itself wherever the cursor
-is.
+    Use of interval timers may interfere with alarm(), sleep(), and
+    usleep().  In standard-speak the "interaction is unspecified",
+    which means that anything may happen: it may work, it may not.
+
+Try not to do any terminal I/O while the twiddler is going (unless you
+don't mind dragging the twiddler around with your cursor).
 
 =head2 Methods
 
@@ -286,24 +276,14 @@ Select an alternate stream to print on. By default, STDOUT is printed to.
 
 Scott Wiersdorf, E<lt>scott@perlcode.orgE<gt>
 
-=head1 CAVEATS
-
-=over 4
-
-=item *
-
-You must have a working B<setitimer> syscall on your system (and it
-must conform to my assumptions!). I have tested this personally on
-Solaris 2.6, Solaris 8, and FreeBSD 4.x. Patches for other OS's
-welcome.
-
-=back
-
 =head1 ACKNOWLEDGEMENTS
 
 Thanks to Tom Christiansen for the timer code (found lurking in an old
 FAQ somewhere). He probably never had an idea that it would be part of
 one of the most useful modules on CPAN ;o)
+
+Adam Klaum for the impetus to make Term::Twiddle just a little more
+portable (I chose to use Time::HiRes for the setitimer stuff).
 
 =head1 SEE ALSO
 
