@@ -4,13 +4,17 @@ use 5.005;
 use strict;
 use vars qw( @ISA $VERSION );
 
-$VERSION = '2.61';
+$VERSION = '2.70';
 
 use Time::HiRes qw(setitimer ITIMER_REAL);
-$SIG{'ALRM'} = \&_spin;
+#$SIG{'ALRM'} = \&_spin;
 $SIG{'INT'} = $SIG{'TERM'} = \&_set_alarm(0);
 
-my ( $thingy, $rate, $probability, $stream, $step );
+## for normal spinning routines
+use vars qw( $thingy $rate $probability $stream $_step );
+
+## for whole line motion routines (e.g., bounce, swish)
+use vars qw( $width $delay $_dtime $_offset $_scale $_time $_xpos);
 
 sub new {
     my $self  = {};
@@ -32,7 +36,9 @@ sub init {
     $self->probability( ( $args->{'probability'} ? $args->{'probability'} : 0 ) );
     $self->stream( ( $args->{'stream'} ? $args->{'stream'} : *STDOUT ) );
 
-    $step        = 0;
+    $self->type( ( $args->{'type'} ? $args->{'type'} : undef ) );
+    $self->width( ( $args->{'width'} ? $args->{'width'} : _get_max_width() ) );
+    $self->delay( ( $args->{'delay'} ? $args->{'delay'} : undef ) );
 }
 
 sub start {
@@ -48,7 +54,7 @@ sub stop {
 sub thingy {
     my $self       = shift;
     my $new_thingy = shift;
-    $step = 0;
+    $_step = 0;
 
     return $thingy = ( $new_thingy
 		       ? $new_thingy
@@ -89,9 +95,136 @@ sub random {
     $self->probability($prob);
 }
 
+sub type {
+    my $self = shift;
+    my $type = shift;
+
+    if( $type eq 'bounce' ) {
+	$_offset = $width/2;
+	$_scale  = $_offset/0.9;
+	$delay   = 0.01;
+	$_dtime  = 0.038;
+	$SIG{'ALRM'} = \&_bounce;
+    }
+
+    elsif( $type eq 'swish' ) {
+	$_offset = $width/2;
+	$delay   = 0.0001;
+	$_dtime  = 0.1;
+	$SIG{'ALRM'} = \&_swish;
+    }
+
+    else {
+	$SIG{'ALRM'} = \&_spin;
+	return 1;
+    }
+}
+
+sub width {
+    my $self      = shift;
+    my $new_width = shift;
+
+    $width = ( defined $new_width
+	       ? $new_width
+	       : $width );
+
+    ## set dependant package vars
+    $_offset = $width/2;
+    $_scale  = $_offset/0.9;
+
+    return $width;
+}
+
+sub delay {
+    my $self      = shift;
+    my $new_delay = shift;
+
+    return $delay = ( defined $new_delay
+		      ? $new_delay
+		      : $delay );
+}
+
 ## send me a SIGALRM in this many seconds (fractions ok)
 sub _set_alarm {
     return setitimer(ITIMER_REAL, shift, 0);
+}
+
+sub _get_max_width {
+    my $width;
+
+    ## suck in Term::Size, if possible
+    eval { require Term::Size };
+
+    ## no Term::Size; try using tput to find terminal width
+    if( $@ ) {
+	## find tput via poor man's "which"
+	for my $path ( split /:/, $ENV{'PATH'} ) {
+	    next unless -x "$path/tput";
+	    $width = `$path/tput cols`;
+	    chomp $width;
+	    last;
+	}
+    }
+
+    ## we have Term::Size; use it
+    else {
+	($width, undef) = &Term::Size::chars(*STDERR);
+    }
+
+    ## assign a default if not already assigned
+    $width ||= 80;
+
+    return $width;
+}
+
+sub _bounce {
+
+  BOUNCE: {
+	my $old_fh = select($stream);
+	local $| = 1;
+
+	my $oldx = $_xpos;
+
+	## original damped harmonic motion filched from some java
+	## somewhere...please forgive me! I can't remember where!
+	$_time += $_dtime;
+	$_xpos = int( $_offset + ($_scale * ( abs(1.7 * cos $_time) - 0.9 ) ) );
+
+	print $stream ' ' x $_xpos;
+	print $stream "*";
+	print $stream ' ' x ( $oldx > $_xpos ? $oldx-$_xpos : 0 );
+	print $stream "\r";
+
+	select($old_fh);
+    }
+
+    $SIG{'ALRM'} = \&_bounce;
+    _set_alarm($delay);
+}
+
+sub _swish {
+
+  SWISH: {
+	my $old_fh = select($stream);
+	local $| = 1;
+
+	my $oldx = $_xpos;
+
+	## orignal swishing motion filched from Term::ReadKey test.pl
+	## by Kenneth Albanowski <kjahds@kjahds.com>
+	$_time += $_dtime;
+	$_xpos = int( $_offset * (cos($_time) + 1) );
+
+	print $stream ' ' x $_xpos;
+	print $stream "*";
+	print $stream ' ' x ( $oldx > $_xpos ? $oldx-$_xpos : 0 );
+	print $stream "\r";
+
+	select($old_fh);
+    }
+
+    $SIG{'ALRM'} = \&_swish;
+    _set_alarm($delay);
 }
 
 sub _spin {
@@ -99,19 +232,19 @@ sub _spin {
   SPIN: {
 	my $old_fh = select($stream);
 	local $| = 1;
-	print $stream $$thingy[$step],
-	  chr(8) x length($$thingy[$step]);
+	print $stream $$thingy[$_step],
+	  chr(8) x length($$thingy[$_step]);
 	select($old_fh);
     }
 
-    $step = ( $step+1 > $#$thingy ? 0 : $step+1 );
+    $_step = ( $_step+1 > $#$thingy ? 0 : $_step+1 );
 
     ## randomize if required
     $rate = rand(0.2)
       if $probability && (rand() * 100) < $probability;
 
     $SIG{'ALRM'} = \&_spin;
-    _set_alarm( $rate );
+    _set_alarm($rate);
 }
 
 1;
@@ -158,7 +291,7 @@ Perl B<system> call). From Time::HiRes:
 Try not to do any terminal I/O while the twiddler is going (unless you
 don't mind dragging the twiddler around with your cursor).
 
-=head2 Methods
+=head2 Spinner Methods
 
 =over 4
 
@@ -262,13 +395,75 @@ Select an alternate stream to print on. By default, STDOUT is printed to.
 
 =back
 
+=head2 Alternative Spinner Methods
+
+Since version 2.70, B<Term::Twiddle> objects support a couple of new
+spinners that aren't so "plain". 2.70 includes a B<bounce>ing ball and
+a B<swish>ing object (that's the best name I could think to call it).
+
+The following methods are used to activate and customize these new
+spinners.
+
+=over 4
+
+=item B<type>
+
+Use this method to set the type of spinner. The default type (no type)
+is whatever B<thingy> is set to. Two other currently supported types
+are B<bounce>, and B<swish>. These may be set in the constructor:
+
+    my $sp = new Term::Twiddle({ type => 'bounce' });
+    $sp->start;
+
+or you can set it with this B<type> method:
+
+    my $sp = new Term::Twiddle;
+    $sp->type('bounce');
+
+There is currently no way to add new B<type>s without some hacking
+(it's on the "to do" list).
+
+=item B<width>
+
+This method is only used when B<type> is undefined (i.e., a normal
+spinner). B<width> determines how wide the B<bounce> or B<swish>
+objects go. B<width> may be set in the constructor:
+
+    my $sp = new Term::Twiddle({ type => 'bounce', width => 60 });
+    $sp->start;
+
+or you can set it with this B<width> method:
+
+    my $sp = new Term::Twiddle({ type => 'swish' });
+    $sp->width(74);
+
+=item B<delay>
+
+Determines the speed of motion of the object. Usually the default is
+fine (and each object has its own default delay option for optimal
+aesthetics).
+
+=back
+
 =head1 EXAMPLES
 
-    ## show the user something while we unpack the archive
+Show the user something while we unpack the archive:
+
     my $sp = new Term::Twiddle;
     $sp->random;
     $sp->start;
     system('tar', '-zxf', '/some/tarfile.tar.gz');
+    $sp->stop;
+
+Show the user a bouncing ball while we modify their configuration
+file:
+
+    my $sp = new Term::Twiddle( { type => 'bounce' } );
+    $sp->start;
+
+    ## there must not be any 'sleep' calls in this!
+    do_config_stuff();
+
     $sp->stop;
 
 =head1 AUTHOR
@@ -281,11 +476,10 @@ Scott Wiersdorf, E<lt>scott@perlcode.orgE<gt>
 
 =item *
 
-Prolly won't run on platforms lacking B<setitimer> (Adam Klaum
-reported this "caveat"). This would include at least Win32, I think.
-Patches/alternative methods welcome. Send me a Win32 box if you want
-me to test it out first. For good measure, also send an iMac--they're
-sooo cute!
+Prolly won't run on platforms lacking B<setitimer>. Will run on
+Cygwin/Win32 (reported by Zak Zebrowski--thanks!).
+
+=item *
 
 =back
 
@@ -307,6 +501,11 @@ his goodness to Perl anyway.
 
 "Drew" (drew@drewtaylor.com) from rt.cpan.org for suggesting the
 removal of 'use warnings' for the faithful 5.005 users.
+
+=item *
+
+Orignal swishing motion filched from B<Term::ReadKey>'s test.pl by
+Kenneth Albanowski (kjahds@kjahds.com). Danke!
 
 =back
 

@@ -1,11 +1,11 @@
 use Test;
 use vars qw( $tests );
-BEGIN { $tests = 9; plan tests => $tests };
+BEGIN { $tests = 12; plan tests => $tests };
 use Term::Twiddle;
 ok(1);
 
-my $sp = new Term::Twiddle;
-
+my $sp;
+$sp = new Term::Twiddle;
 unless( get_ans("Do you want to run the (brief but interactive) tests?", 'y') ) {
     for (1..$tests-1) { ok(1) }
     exit;
@@ -13,6 +13,7 @@ unless( get_ans("Do you want to run the (brief but interactive) tests?", 'y') ) 
 
 ## basic spin
 printw("going to spin for 1 second or so ==> ");
+$sp = new Term::Twiddle;
 $sp->start();
 system('sleep', '1');
 $sp->stop();
@@ -88,6 +89,31 @@ $sp->start;
 system('sleep', '3');
 $sp->stop;
 ok( get_ans("Did it work?", "y") );
+
+## swishing object
+printw("trying a new constructor (should be a swishing object) ==>\n");
+$sp = new Term::Twiddle({type => 'swish'});
+$sp->start;
+system('sleep', '4');
+$sp->stop;
+ok( get_ans("\nDid it work?", "y") );
+
+## bouncy ball
+printw("trying a new constructor (should be a bouncing ball) ==>\n");
+$sp = new Term::Twiddle({type => 'bounce'});
+$sp->start;
+system('sleep', '5');
+$sp->stop;
+ok( get_ans("\nDid it work?", "y") );
+
+printw("trying a new constructor (should be another, shorter bouncing ball) ==>\n");
+$sp = new Term::Twiddle();
+$sp->type('bounce');
+$sp->width($sp->width()/2);
+$sp->start;
+system('sleep', '5');
+$sp->stop;
+ok( get_ans("\nDid it work?", "y") );
 
 exit;
 
