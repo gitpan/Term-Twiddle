@@ -1,6 +1,8 @@
 Revision history for Perl extension Term::Twiddle.
 
 
+2.61  Removed 'use warnings' for faithful 5.005 users.
+
 2.60  Use Time::HiRes for setitimer implementation.
 
 2.51  First public release (but has been in private use for several

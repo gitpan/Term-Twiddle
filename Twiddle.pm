@@ -2,10 +2,9 @@ package Term::Twiddle;
 
 use 5.005;
 use strict;
-use warnings;
 use vars qw( @ISA $VERSION );
 
-$VERSION = '2.60';
+$VERSION = '2.61';
 
 use Time::HiRes qw(setitimer ITIMER_REAL);
 $SIG{'ALRM'} = \&_spin;
@@ -276,14 +275,40 @@ Select an alternate stream to print on. By default, STDOUT is printed to.
 
 Scott Wiersdorf, E<lt>scott@perlcode.orgE<gt>
 
+=head1 CAVEATS
+
+=over 4
+
+=item *
+
+Prolly won't run on platforms lacking B<setitimer> (Adam Klaum
+reported this "caveat"). This would include at least Win32, I think.
+Patches/alternative methods welcome. Send me a Win32 box if you want
+me to test it out first. For good measure, also send an iMac--they're
+sooo cute!
+
+=back
+
 =head1 ACKNOWLEDGEMENTS
+
+=over 4
+
+=item *
 
 Thanks to Tom Christiansen for the timer code (found lurking in an old
 FAQ somewhere). He probably never had an idea that it would be part of
 one of the most useful modules on CPAN ;o)
 
-Adam Klaum for the impetus to make Term::Twiddle just a little more
-portable (I chose to use Time::HiRes for the setitimer stuff).
+The timer code has since been replaced by B<Time::HiRes>'s
+B<setitimer> function, but it is good to thank Mr. Christiansen for
+his goodness to Perl anyway.
+
+=item *
+
+"Drew" (drew@drewtaylor.com) from rt.cpan.org for suggesting the
+removal of 'use warnings' for the faithful 5.005 users.
+
+=back
 
 =head1 SEE ALSO
 
