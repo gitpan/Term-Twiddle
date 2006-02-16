@@ -4,7 +4,7 @@ use 5.005;
 use strict;
 use vars qw( @ISA $VERSION );
 
-$VERSION = '2.70';
+$VERSION = '2.71';
 
 use Time::HiRes qw(setitimer ITIMER_REAL);
 #$SIG{'ALRM'} = \&_spin;
@@ -36,7 +36,7 @@ sub init {
     $self->probability( ( $args->{'probability'} ? $args->{'probability'} : 0 ) );
     $self->stream( ( $args->{'stream'} ? $args->{'stream'} : *STDOUT ) );
 
-    $self->type( ( $args->{'type'} ? $args->{'type'} : undef ) );
+    $self->type( ( $args->{'type'} ? $args->{'type'} : '' ) );
     $self->width( ( $args->{'width'} ? $args->{'width'} : _get_max_width() ) );
     $self->delay( ( $args->{'delay'} ? $args->{'delay'} : undef ) );
 }
@@ -97,7 +97,7 @@ sub random {
 
 sub type {
     my $self = shift;
-    my $type = shift;
+    my $type = shift || '';
 
     if( $type eq 'bounce' ) {
 	$_offset = $width/2;

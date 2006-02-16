@@ -1,5 +1,6 @@
 Revision history for Perl extension Term::Twiddle.
 
+2.71  Minor fix for 'use warnings' cleanness
 
 2.70  Added new 'type' method (and supporting methods) for bouncing
       ball and swishing motion. The bouncing ball is really cool!
