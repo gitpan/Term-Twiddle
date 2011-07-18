@@ -1,6 +1,6 @@
 use Test;
 use vars qw( $tests );
-BEGIN { $tests = 12; plan tests => $tests };
+BEGIN { $tests = 13; plan tests => $tests };
 use Term::Twiddle;
 ok(1);
 
@@ -114,6 +114,15 @@ $sp->start;
 system('sleep', '5');
 $sp->stop;
 ok( get_ans("\nDid it work?", "y") );
+
+## out of scope
+{
+    printw("testing destructor (spinner should stop after 2 sec) ==> ");
+    my $tw = new Term::Twiddle({rate => 0.1});
+    $tw->start;
+    system('sleep', '2');
+}
+ok( get_ans("Did it work?", "y") );
 
 exit;
 

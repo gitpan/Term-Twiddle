@@ -4,7 +4,7 @@ use 5.005;
 use strict;
 use vars qw( @ISA $VERSION );
 
-$VERSION = '2.71';
+$VERSION = '2.72';
 
 use Time::HiRes qw(setitimer ITIMER_REAL);
 #$SIG{'ALRM'} = \&_spin;
@@ -245,6 +245,10 @@ sub _spin {
 
     $SIG{'ALRM'} = \&_spin;
     _set_alarm($rate);
+}
+
+sub DESTROY {
+    shift->stop;
 }
 
 1;
