@@ -6,7 +6,9 @@ ok(1);
 
 my $sp;
 $sp = new Term::Twiddle;
-unless( get_ans("Do you want to run the (brief but interactive) tests?", 'y') ) {
+
+unless( _is_interactive() and
+        get_ans("Do you want to run the (brief but interactive) tests?", 'y') ) {
     for (1..$tests-1) { ok(1) }
     exit;
 }
@@ -143,4 +145,20 @@ sub get_ans {
     $ans = ( $ans ? $ans : $default );
 
     return $ans =~ /^$default/i;
+}
+
+# scottw: copied (also without comments) from IO::Prompt::Tiny
+# Copied (without comments) from IO::Interactive::Tiny by Daniel Muey,
+# based on IO::Interactive by Damian Conway and brian d foy
+sub _is_interactive {
+  my ($out_handle) = (@_, select);
+  return 0 if not -t $out_handle;
+  if ( tied(*ARGV) or defined(fileno(ARGV)) ) {
+    return -t *STDIN if defined $ARGV && $ARGV eq '-';
+    return @ARGV>0 && $ARGV[0] eq '-' && -t *STDIN if eof *ARGV;
+    return -t *ARGV;
+}
+  else {
+    return -t *STDIN;
+}
 }

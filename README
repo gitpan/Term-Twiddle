@@ -1,4 +1,4 @@
-Term/Twiddle version 2.72
+Term/Twiddle version 2.73
 =========================
 
 DESCRIPTION
@@ -55,4 +55,4 @@ COPYRIGHT AND LICENCE
 This library is free software; you can redistribute it and/or modify
 it under the terms of the Perl Artistic License.
 
-Copyright (C) 2002 Scott Wiersdorf
+Copyright (C) 2002-2012 Scott Wiersdorf

@@ -4,7 +4,7 @@ use 5.005;
 use strict;
 use vars qw( @ISA $VERSION );
 
-$VERSION = '2.72';
+$VERSION = '2.73';
 
 use Time::HiRes qw(setitimer ITIMER_REAL);
 #$SIG{'ALRM'} = \&_spin;
